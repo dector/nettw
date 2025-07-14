@@ -28,8 +28,8 @@ func main() {
         panic(err)
     }
 
-		// If port 8080 free - we will get it here.
-		// If not - random free port will be returned.
+    // If port 8080 free - we will get it here.
+    // If not - random free port will be returned.
     fmt.Printf("Using port: %d\n", port.Int)
 }
 ```
@@ -48,8 +48,8 @@ import (
 
 func main() {
     port, err := nettw.ParsePortOrPickAnotherWithArgs(
-		    "8080",
-		    nettw.ParsePortArgs{
+        "8080",
+        nettw.ParsePortArgs{
             NewPortFrom:       3000,
             NewPortTo:         4000,
             MaxTries:          50,

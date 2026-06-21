@@ -15,22 +15,58 @@ type ParsePortArgs struct {
 	MaxTries    int
 }
 
+type ParsePortOption func(*ParsePortArgs)
+
 type Port struct {
 	Str string
 	Int int
 }
 
-func ParsePortOrPickAnother(port string) (Port, error) {
-	return ParsePortOrPickAnotherWithArgs(port, ParsePortArgs{
+func ParsePortOrPickAnother(port string, options ...ParsePortOption) (Port, error) {
+	args := defaultParsePortArgs()
+	for _, option := range options {
+		option(&args)
+	}
+
+	return parsePortOrPickAnother(port, args)
+}
+
+// ParsePortOrPickAnotherWithArgs is kept for compatibility.
+// Prefer ParsePortOrPickAnother with functional options for new code.
+func ParsePortOrPickAnotherWithArgs(port string, args ParsePortArgs) (Port, error) {
+	return parsePortOrPickAnother(port, args)
+}
+
+func WithIgnoreInvalidPort(ignore bool) ParsePortOption {
+	return func(args *ParsePortArgs) {
+		args.IgnoreInvalidPort = ignore
+	}
+}
+
+func WithPortRange(from, to int) ParsePortOption {
+	return func(args *ParsePortArgs) {
+		args.NewPortFrom = from
+		args.NewPortTo = to
+	}
+}
+
+func WithMaxTries(maxTries int) ParsePortOption {
+	return func(args *ParsePortArgs) {
+		args.MaxTries = maxTries
+	}
+}
+
+func defaultParsePortArgs() ParsePortArgs {
+	return ParsePortArgs{
 		IgnoreInvalidPort: false,
 
 		NewPortFrom: 10000,
 		NewPortTo:   20000,
 		MaxTries:    100,
-	})
+	}
 }
 
-func ParsePortOrPickAnotherWithArgs(port string, args ParsePortArgs) (Port, error) {
+func parsePortOrPickAnother(port string, args ParsePortArgs) (Port, error) {
 	pport, err := strconv.Atoi(port)
 	if err != nil && !args.IgnoreInvalidPort {
 		return Port{}, err

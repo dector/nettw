@@ -34,9 +34,9 @@ func main() {
 }
 ```
 
-### Getting a Port with Custom Arguments
+### Getting a Port with Custom Options
 
-Use `ParsePortOrPickAnotherWithArgs()`:
+Use `ParsePortOrPickAnother()` with functional options:
 
 ```go
 package main
@@ -47,13 +47,10 @@ import (
 )
 
 func main() {
-    port, err := nettw.ParsePortOrPickAnotherWithArgs(
+    port, err := nettw.ParsePortOrPickAnother(
         "8080",
-        nettw.ParsePortArgs{
-            NewPortFrom:       3000,
-            NewPortTo:         4000,
-            MaxTries:          50,
-        }
+        nettw.WithPortRange(3000, 4000),
+        nettw.WithMaxTries(50),
     )
     if err != nil {
         panic(err)

@@ -1,11 +1,15 @@
 # nettw
 
+> [!NOTE]
+> This package moved from `github.com/dector/nettw` to `dector.space/go/nettw`.
+> Use the new import path.
+
 Small network-oriented Go library.
 
 ## Installation
 
 ```bash
-go get github.com/dector/nettw
+go get dector.space/go/nettw
 ```
 
 ## Usage
@@ -19,7 +23,7 @@ package main
 
 import (
     "fmt"
-    "github.com/dector/nettw"
+    "dector.space/go/nettw"
 )
 
 func main() {
@@ -43,7 +47,7 @@ package main
 
 import (
     "fmt"
-    "github.com/dector/nettw"
+    "dector.space/go/nettw"
 )
 
 func main() {

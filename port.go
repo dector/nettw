@@ -19,6 +19,8 @@ type ParsePortArgs struct {
 	PortSuffixSeed   string
 	PortSuffixDigits int
 	UsePortSuffix    bool
+
+	optionErr error
 }
 
 type ParsePortOption func(*ParsePortArgs)
@@ -89,6 +91,10 @@ func defaultParsePortArgs() ParsePortArgs {
 }
 
 func parsePortOrPickAnother(port string, args ParsePortArgs) (Port, error) {
+	if args.optionErr != nil {
+		return Port{}, args.optionErr
+	}
+
 	pport, err := strconv.Atoi(port)
 	if err != nil && !args.IgnoreInvalidPort {
 		return Port{}, err

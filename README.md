@@ -96,6 +96,22 @@ For example, a one-digit suffix keeps ports in a block like `12340`–`12349`. U
 
 The selected block must fit completely inside the configured port range. `WithPortSuffix()` supports 1–4 trailing digits.
 
+### Repo-aware path seeds
+
+`WithRepoAwareSeed(repoRoot, path, digits)` combines the repo seed and suffix seed, normalizing relative and absolute paths:
+
+```go
+port, err := nettw.ParsePortOrPickAnother(
+    "",
+    nettw.WithIgnoreInvalidPort(true),
+    nettw.WithRepoAwareSeed("/work/my-repo", "apps/web", 2),
+)
+```
+
+Using `/work/my-repo/apps/web` as the path produces the same seeds. A relative repo root is resolved against the working directory; a relative subdirectory path is resolved against the repo root. An empty path or `.` selects the repo root itself.
+
+Paths outside the repo and suffix widths outside 1–4 return an error, even if an explicitly requested port is available. Paths are cleaned lexically; symlinks are not resolved and the directories need not exist. The repo root is supplied explicitly, not discovered through Git. Seeds may collide, so different subdirectories are not guaranteed unique ports.
+
 ## License
 
 This project is licensed under the MIT License.

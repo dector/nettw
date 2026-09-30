@@ -15,6 +15,10 @@ type ParsePortArgs struct {
 	NewPortTo   int
 	MaxTries    int
 	Seed        string
+
+	PortSuffixSeed   string
+	PortSuffixDigits int
+	UsePortSuffix    bool
 }
 
 type ParsePortOption func(*ParsePortArgs)
@@ -64,6 +68,16 @@ func WithSeed(seed string) ParsePortOption {
 	}
 }
 
+// WithPortSuffix uses seed to choose the trailing digits of a fallback port.
+// WithSeed chooses the shared leading part. digits must be between 1 and 4.
+func WithPortSuffix(seed string, digits int) ParsePortOption {
+	return func(args *ParsePortArgs) {
+		args.PortSuffixSeed = seed
+		args.PortSuffixDigits = digits
+		args.UsePortSuffix = true
+	}
+}
+
 func defaultParsePortArgs() ParsePortArgs {
 	return ParsePortArgs{
 		IgnoreInvalidPort: false,
@@ -103,6 +117,10 @@ func findAvailablePort(args ParsePortArgs) (Port, error) {
 	minPort, maxPort := args.NewPortFrom, args.NewPortTo
 	if maxPort < minPort {
 		return Port{}, fmt.Errorf("invalid port range: %d-%d", minPort, maxPort)
+	}
+
+	if args.UsePortSuffix || args.PortSuffixDigits != 0 {
+		return findAvailablePortWithSuffix(args)
 	}
 
 	portsCount := maxPort - minPort + 1
@@ -152,6 +170,65 @@ func findAvailablePortFromSeed(args ParsePortArgs, portsCount int) (Port, error)
 	}
 
 	return Port{}, fmt.Errorf("failed to find available port after %d attempts", args.MaxTries)
+}
+
+func findAvailablePortWithSuffix(args ParsePortArgs) (Port, error) {
+	basePort, startSuffix, suffixCount, err := portSuffixCandidate(args)
+	if err != nil {
+		return Port{}, err
+	}
+
+	maxAttempts := min(args.MaxTries, suffixCount)
+	for attempt := range maxAttempts {
+		currentPort := basePort + ((startSuffix + attempt) % suffixCount)
+		if !isPortAvailable(currentPort) {
+			continue
+		}
+
+		return Port{
+			Str: strconv.Itoa(currentPort),
+			Int: currentPort,
+		}, nil
+	}
+
+	return Port{}, fmt.Errorf("failed to find available port after %d attempts", maxAttempts)
+}
+
+// portSuffixCandidate returns a repo-selected block and a subdirectory-selected
+// suffix within that block.
+func portSuffixCandidate(args ParsePortArgs) (basePort, startSuffix, suffixCount int, err error) {
+	digits := args.PortSuffixDigits
+	if digits < 1 || digits > 4 {
+		return 0, 0, 0, fmt.Errorf("invalid port suffix digits: %d (must be between 1 and 4)", digits)
+	}
+
+	minPort, maxPort := args.NewPortFrom, args.NewPortTo
+	if minPort < 1 || maxPort > 65535 || maxPort < minPort {
+		return 0, 0, 0, fmt.Errorf("invalid port range: %d-%d", minPort, maxPort)
+	}
+
+	suffixCount = 1
+	for range digits {
+		suffixCount *= 10
+	}
+
+	firstBlock := ((minPort + suffixCount - 1) / suffixCount) * suffixCount
+	lastBlock := ((maxPort + 1) / suffixCount * suffixCount) - suffixCount
+	if lastBlock < firstBlock {
+		return 0, 0, 0, fmt.Errorf("port range %d-%d has no complete block for %d trailing digits", minPort, maxPort, digits)
+	}
+
+	blockCount := (lastBlock-firstBlock)/suffixCount + 1
+	var blockOffset int
+	if args.Seed != "" {
+		blockOffset = seedOffset(args.Seed, blockCount)
+	} else {
+		blockOffset = rand.IntN(blockCount)
+	}
+
+	basePort = firstBlock + blockOffset*suffixCount
+	startSuffix = seedOffset(args.PortSuffixSeed, suffixCount)
+	return basePort, startSuffix, suffixCount, nil
 }
 
 func seedOffset(seed string, portsCount int) int {

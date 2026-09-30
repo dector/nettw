@@ -79,6 +79,23 @@ port, err := nettw.ParsePortOrPickAnother(
 
 If the seeded port is unavailable, nettw checks the next ports in a deterministic order.
 
+### Keep ports for one repo visually grouped
+
+Use `WithSeed()` for the repo and `WithPortSuffix()` for the subdirectory. The repo seed selects a shared port block; the subdirectory seed selects the requested number of trailing digits:
+
+```go
+port, err := nettw.ParsePortOrPickAnother(
+    "",
+    nettw.WithIgnoreInvalidPort(true),
+    nettw.WithSeed("/work/my-repo"),
+    nettw.WithPortSuffix("apps/web", 1),
+)
+```
+
+For example, a one-digit suffix keeps ports in a block like `12340`–`12349`. Use `2` or `3` to vary the last two or three digits. Each repo-relative subdirectory can use a different suffix seed, while the repo seed keeps the leading part shared. If a candidate is busy, nettw tries other suffixes in that same block.
+
+The selected block must fit completely inside the configured port range. `WithPortSuffix()` supports 1–4 trailing digits.
+
 ## License
 
 This project is licensed under the MIT License.

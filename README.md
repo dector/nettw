@@ -96,21 +96,36 @@ For example, a one-digit suffix keeps ports in a block like `12340`–`12349`. U
 
 The selected block must fit completely inside the configured port range. `WithPortSuffix()` supports 1–4 trailing digits.
 
-### Repo-aware path seeds
+### Multiple seed segments
 
-`WithRepoAwareSeed(repoRoot, path, digits)` combines the repo seed and suffix seed, normalizing relative and absolute paths:
+`WithSeedSegments()` groups ports using independently seeded decimal segments:
 
 ```go
 port, err := nettw.ParsePortOrPickAnother(
     "",
     nettw.WithIgnoreInvalidPort(true),
-    nettw.WithRepoAwareSeed("/work/my-repo", "apps/web", 2),
+    nettw.WithSeedSegments(
+        nettw.SeedSegment{Seed: "my-project"},
+        nettw.SeedSegment{Seed: "backend", Digits: 1},
+        nettw.SeedSegment{Seed: "api", Digits: 1},
+    ),
 )
 ```
 
-Using `/work/my-repo/apps/web` as the path produces the same seeds. A relative repo root is resolved against the working directory; a relative subdirectory path is resolved against the repo root. An empty path or `.` selects the repo root itself.
+For a five-digit port, this produces a pattern like `PPPST`: the project selects `PPP`, the service group selects `S`, and the server selects `T`. Changing a later seed preserves the preceding segments. Busy-port retries change only the final segment, wrapping within that segment; an exhausted group returns an error rather than changing its prefix.
 
-Paths outside the repo and suffix widths outside 1–4 return an error, even if an explicitly requested port is available. Paths are cleaned lexically; symlinks are not resolved and the directories need not exist. The repo root is supplied explicitly, not discovered through Git. Seeds may collide, so different subdirectories are not guaranteed unique ports.
+The first segment must have `Digits: 0` (the default) and uses the remaining leading digits. At least two segments are required. Later segments each use 1–4 digits, with at most 4 trailing digits in total. The complete leading block must fit inside the configured port range. More trailing digits leave fewer distinct leading groups.
+
+This option takes precedence over `WithSeed()` and `WithPortSuffix()`. Invalid segments return an error even if an explicitly requested port is available. Seeds are opaque strings: paths are not normalized or resolved. Seeds may collide, so distinct seeds do not guarantee unique ports.
+
+`WithRepoAwareSeed()` has been removed. To migrate its two-part grouping, pass the normalized root and relative path as two segments:
+
+```go
+nettw.WithSeedSegments(
+    nettw.SeedSegment{Seed: normalizedRoot},
+    nettw.SeedSegment{Seed: relativePath, Digits: 2},
+)
+```
 
 ## License
 

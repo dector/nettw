@@ -20,6 +20,8 @@ type ParsePortArgs struct {
 	PortSuffixDigits int
 	UsePortSuffix    bool
 
+	SeedSegments []SeedSegment
+
 	optionErr error
 }
 
@@ -125,6 +127,10 @@ func findAvailablePort(args ParsePortArgs) (Port, error) {
 		return Port{}, fmt.Errorf("invalid port range: %d-%d", minPort, maxPort)
 	}
 
+	if args.SeedSegments != nil {
+		return findAvailablePortWithSegments(args)
+	}
+
 	if args.UsePortSuffix || args.PortSuffixDigits != 0 {
 		return findAvailablePortWithSuffix(args)
 	}
@@ -184,7 +190,11 @@ func findAvailablePortWithSuffix(args ParsePortArgs) (Port, error) {
 		return Port{}, err
 	}
 
-	maxAttempts := min(args.MaxTries, suffixCount)
+	return findAvailablePortInBlock(basePort, startSuffix, suffixCount, args.MaxTries)
+}
+
+func findAvailablePortInBlock(basePort, startSuffix, suffixCount, maxTries int) (Port, error) {
+	maxAttempts := min(maxTries, suffixCount)
 	for attempt := range maxAttempts {
 		currentPort := basePort + ((startSuffix + attempt) % suffixCount)
 		if !isPortAvailable(currentPort) {
@@ -200,8 +210,7 @@ func findAvailablePortWithSuffix(args ParsePortArgs) (Port, error) {
 	return Port{}, fmt.Errorf("failed to find available port after %d attempts", maxAttempts)
 }
 
-// portSuffixCandidate returns a repo-selected block and a subdirectory-selected
-// suffix within that block.
+// portSuffixCandidate returns a seed-selected block and a suffix within it.
 func portSuffixCandidate(args ParsePortArgs) (basePort, startSuffix, suffixCount int, err error) {
 	digits := args.PortSuffixDigits
 	if digits < 1 || digits > 4 {
